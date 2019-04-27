@@ -171,16 +171,6 @@ func encodeSecret(secret string) string {
 	return encrypt(secret, Passphrase)
 }
 
-func decodeSecretClient(w http.ResponseWriter, r *http.Request) {
-	encodedSecret := getArgument(r, "client_encoded_secret")
-	secret := decodeSecret(encodedSecret)
- 	w.Write([]byte(secret))
-}
-
-func decodeSecret(encodedSecret string) string {
-	return decrypt(encodedSecret, Passphrase)
-}
-
 type MessageAccessToken struct {
 	Code                string `json:"code"`
 	ClientId            string `json:"client_id"`
@@ -221,7 +211,6 @@ func main() {
 	router := mux.NewRouter().StrictSlash(true)
 	router.HandleFunc("/ok", makeRouter([]string{"GET"}, okClient))
 	router.HandleFunc("/encoded_secret", makeRouter([]string{"POST"}, encodeSecretClient))
-	router.HandleFunc("/secret", makeRouter([]string{"GET"}, decodeSecretClient))
 	router.HandleFunc("/login/oauth/access_token", makeRouter([]string{"OPTIONS", "POST"}, getAccessTokenClient))
 
 	err := http.ListenAndServe(":8000", router)
