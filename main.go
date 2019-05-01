@@ -158,17 +158,48 @@ func decrypt(ciphertext, passphrase string) string {
 }
 
 func okClient(w http.ResponseWriter, r *http.Request) {
- 	w.Write([]byte("ok"))
+	w.Write([]byte("ok"))
+}
+
+func getHostname(host string) string {
+	if !(strings.HasPrefix(host, "https://") || strings.HasPrefix(host, "http://")) {
+		host = fmt.Sprintf("http://%s", host)
+	}
+
+	u, err := url.Parse(host)
+	checkErr(err, "genPassphrase. url.Parse(%s)", host)
+	hostname := u.Host
+
+	if len(hostname) > 40 {
+		panic(fmt.Sprintf("host length limit 40. %s", hostname))
+	}
+
+	return hostname
+}
+
+func genPassphrase(host string) string {
+	hostname := getHostname(host)
+	if hostname == "" {
+		panic(fmt.Sprint("genPassphrase. cann't get host from %s", host))
+	}
+	return fmt.Sprintf("%s%s", hostname, Passphrase)
 }
 
 func encodeSecretClient(w http.ResponseWriter, r *http.Request) {
 	secret := getArgument(r, "client_secret")
-	encoded := encodeSecret(secret)
- 	w.Write([]byte(encoded))
+	host := getArgument(r, "host")
+	encoded := encodeSecret(secret, host)
+	w.Write([]byte(encoded))
 }
 
-func encodeSecret(secret string) string {
-	return encrypt(secret, Passphrase)
+func encodeSecret(secret, host string) string {
+	passphrase := genPassphrase(host)
+	return encrypt(secret, passphrase)
+}
+
+func decodeSecret(encodedSecret, referer string) string {
+	passphrase := genPassphrase(referer)
+	return decrypt(encodedSecret, passphrase)
 }
 
 type MessageAccessToken struct {
@@ -188,7 +219,8 @@ func getAccessTokenClient(w http.ResponseWriter, r *http.Request) {
 		err = json.Unmarshal(b, &msg)
 		checkErr(err, "can not unmarshal body")
 
-		clientSecret := decrypt(msg.ClientEncodedSecret, Passphrase)
+		referer := r.Header.Get("Referer")
+		clientSecret := decodeSecret(msg.ClientEncodedSecret, referer)
 		info = getAccessToken(msg.Code, msg.ClientId, clientSecret)
 	}
 
