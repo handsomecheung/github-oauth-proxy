@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 set -e
 
 export GOOS=linux
@@ -8,4 +8,4 @@ export CGO_ENABLED=0
 go get github.com/bitly/go-simplejson
 go get github.com/gorilla/mux
 
-go build
+go build -o github-oauth-proxy
